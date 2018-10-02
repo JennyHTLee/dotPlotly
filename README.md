@@ -18,16 +18,19 @@ For PAF format (e.g. [minimap2](https://github.com/lh3/minimap2)):
 
 ```
 ./pafCoordsDotPlotly.R -i example.paf -o out -s -t -m 500 -q 500000 -k 7 -l
+
+# to label centromeric region in red
+./pafCoordsDotPlotly.R -i example.paf  -o out -c 1310000-1410000
 ```
 
 ### Updates (10/29/17)
 
   + Added script for [PAF format](https://github.com/lh3/miniasm/blob/master/PAF.md)
-  + Fixes for Mummer format script: add -t param, add handling of one ref chrom 
+  + Fixes for Mummer format script: add -t param, add handling of one ref chrom
 
 ### Dependencies
 
-The script requires three R packages: `install.packages(c("optparse", "ggplot2", "plotly"))`. 
+The script requires three R packages: `install.packages(c("optparse", "ggplot2", "plotly"))`.
 
 ### Script parameters
 
@@ -69,6 +72,9 @@ Use `./mummerCoordsDotPlotly.R -h` to see options.
 
 	-r REFERENCE-IDS, --reference-ids=REFERENCE-IDS
 		comma-separated list of reference IDs to keep [default NULL]
+
+  -c, --centromere
+    start and stop position of centromere, separated by - [default NULL]
 
 	-h, --help
 		Show this help message and exit
