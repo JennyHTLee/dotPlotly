@@ -4,6 +4,8 @@
 suppressPackageStartupMessages(library(optparse))
 suppressPackageStartupMessages(library(ggplot2))
 suppressPackageStartupMessages(library(plotly))
+suppressPackageStartupMessages(library(stringr))
+suppressPackageStartupMessages(library(reshape2))
 
 option_list <- list(
   make_option(c("-i","--input"), type="character", default=NULL,
@@ -41,6 +43,9 @@ option_list <- list(
   make_option(c("-r", "--reference-ids"), type="character", default=NULL,
               help="comma-separated list of reference IDs to keep [default %default]",
               dest="refIDs")
+  make_option(c("-c", "--centromere"), type="character", default=NULL,
+             help="start and stop position of centromere, separated by - [default %default]",
+             dest="centromere")
 )
 
 options(error=traceback)
@@ -81,7 +86,7 @@ if(is.null(opt$refIDs)){
   }
   refIDsToKeepOrdered = names(sort(chromMax, decreasing = T)[1:opt$keep_ref])
   alignments = alignments[which(alignments$refID %in% refIDsToKeepOrdered),]
-  
+
 } else {
   refIDsToKeepOrdered = unlist(strsplit(opt$refIDs, ","))
   alignments = alignments[which(alignments$refID %in% refIDsToKeepOrdered),]
@@ -113,12 +118,12 @@ if(length(levels(alignments$refID)) > 1){
 } else {
   alignments$refStart2 = alignments$refStart
   alignments$refEnd2 = alignments$refEnd
-  
+
 }
 
 ## queryID sorting step 1/2
 # sort levels of factor 'queryID' based on longest alignment
-alignments$queryID = factor(alignments$queryID, levels=unique(as.character(alignments$queryID))) 
+alignments$queryID = factor(alignments$queryID, levels=unique(as.character(alignments$queryID)))
 queryMaxAlnIndex = tapply(alignments$lenAlnQuery,
                           alignments$queryID,
                           which.max,
@@ -132,7 +137,7 @@ alignments$queryID = factor(alignments$queryID, levels = unique(as.character(ali
 
 ## queryID sorting step 2/2
 ## sort levels of factor 'queryID' based on longest aggregrate alignmentst to refID's
-# per query ID, get aggregrate alignment length to each refID 
+# per query ID, get aggregrate alignment length to each refID
 queryLenAggPerRef = sapply((levels(alignments$queryID)), function(x) tapply(alignments$lenAlnQuery[which(alignments$queryID == x)], alignments$refID[which(alignments$queryID == x)], sum) )
 if(length(levels(alignments$refID)) > 1){
   queryID_Ref = apply(queryLenAggPerRef, 2, function(x) rownames(queryLenAggPerRef)[which.max(x)])
@@ -213,14 +218,15 @@ if (opt$similarity) {
       panel.grid.major.y = element_blank(),
       panel.grid.minor.y = element_blank(),
       panel.grid.minor.x = element_blank(),
-      axis.text.y = element_text(size = 4, angle = 15)
+      axis.text.y = element_text(size = 12, angle = 90)
+      axis.text.x = element_text(size = 12)
     ) +
     scale_y_continuous(breaks = yTickMarks, labels = substr(levels(alignments$queryID), start = 1, stop = 20)) +
     { if(opt$h_lines){ geom_hline(yintercept = yTickMarks,
                                   color = "grey60",
-                                  size = .1) }} +
+                                  size = .3) }} +
     scale_color_distiller(palette = "Spectral") +
-    labs(color = "Mean Percent Identity (per query)", 
+    labs(color = "Mean Percent Identity (per query)",
          title = paste0(   paste0("Post-filtering number of alignments: ", nrow(alignments),"\t\t\t\t"),
                            paste0("minimum alignment length (-m): ", opt$min_align,"\n"),
                            paste0("Post-filtering number of queries: ", length(unique(alignments$queryID)),"\t\t\t\t\t\t\t\t"),
@@ -258,13 +264,14 @@ if (opt$similarity) {
       panel.grid.major.y = element_blank(),
       panel.grid.minor.y = element_blank(),
       panel.grid.minor.x = element_blank(),
-      axis.text.y = element_text(size = 4, angle = 15)
+      axis.text.y = element_text(size = 12, angle = 0, vjust = 1.0, hjust = 0),
+      axis.text.x = element_text(size = 12)
     ) +
     scale_y_continuous(breaks = yTickMarks, labels = substr(levels(alignments$queryID), start = 1, stop = 20)) +
     { if(opt$h_lines){ geom_hline(yintercept = yTickMarks,
                                   color = "grey60",
-                                  size = .1) }} +
-    labs(color = "Mean Percent Identity (per query)", 
+                                  size = .2) }} +
+    labs(color = "Mean Percent Identity (per query)",
          title = paste0(   paste0("Post-filtering number of alignments: ", nrow(alignments),"\t\t\t\t"),
                            paste0("minimum alignment length (-m): ", opt$min_align,"\n"),
                            paste0("Post-filtering number of queries: ", length(unique(alignments$queryID)),"\t\t\t\t\t\t\t\t"),
@@ -273,6 +280,17 @@ if (opt$similarity) {
     xlab("Target") +
     ylab("Query")
 }
+
+
+cent_s <- as.integer(colsplit(opt$centromere, "-", names=c("c", "d"))[1,1])
+cent_e <- as.integer(colsplit(opt$centromere, "-", names=c("c", "d"))[1,2])
+
+if(is.null(opt$centromere)){
+        next
+} else {
+        gp <- gp + annotate("rect", xmin=cent_s, xmax=cent_e, ymin=-Inf, ymax=0, fill = "red")
+}
+
 # gp
 ggsave(filename = paste0(opt$output_filename, ".png"), width = opt$plot_size, height = opt$plot_size, units = "in", dpi = 300, limitsize = F)
 
